@@ -29,7 +29,7 @@ router.post('/', [
         const user = await User.findOne({ email });
         if (!user) return res.status(501).json({ errors: { message: "User not valid "}})
         const isSameUser = await bcrypt.compare(password, user.password);
-        if(!isSameUser) return res.status(501).json({ errors: { message: "User not valid "}});
+        if(!isSameUser) return res.status(501).json({ errors: [{ message: 'Invalid Credentials' }] });
 
         const payload = {
             user: {

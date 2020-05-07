@@ -58,7 +58,7 @@ router.post('/', [ [
         if(bio) profile.bio = bio
         if(status) profile.status = status  
         if(githubusername) profile.githubusername = githubusername
-        if(skills) profile.skills = skills.split(',').map(skill => skill.trim());
+        if(skills) profile.skills = Array.isArray(skills) ? skills : skills.split(',').map((skill) => ' ' + skill.trim()),
 
         profile.social = {};
         if(youtube) profile.social.youtube = youtube

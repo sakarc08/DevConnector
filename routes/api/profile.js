@@ -5,18 +5,8 @@ const { check, validationResult } = require('express-validator');
 const auth = require('../../middlewares/auth');
 const Profile = require('../../models/Profile');
 const User = require('../../models/User');
+const Post = require('../../models/Post');
 const router = express.Router();
-
-router.get('/user/:id', async (req, res) => { 
-    try {
-        const profile = await Profile.findOne({ user: req.params.id }).populate('user', ['name', 'avatar']);
-        if(!profile) return res.status(400).json({ message: 'Profile not found'});
-        res.json(profile);   
-    } catch (error) {
-        if(error.kind == "ObjectId") res.status(400).json({ message: 'Profile not found'});
-        res.status(500).json({ message: 'Server error'});
-    }
-});
 
 router.get('/', async (req,res) => {
     try {
@@ -32,12 +22,23 @@ router.get('/', async (req,res) => {
 router.get('/me', auth, async (req, res) => { 
     const userId = req.user.id;
     try {
-        const profile = await Profile.findOne({ user: userId }).populate('User', ['name', 'avatar']);
+        const profile = await Profile.findOne({ user: userId }).populate('user', ['name', 'avatar']);
         if (!profile) return res.status(400).json({ message: 'No profile for the requested User'});
         res.json(profile);
     } catch (error) {
         console.log(error.message);
         res.status(500).send('Server error')
+    }
+});
+
+router.get('/:id', async (req, res) => { 
+    try {
+        const profile = await Profile.findOne({ user: req.params.id }).populate('user', ['name', 'avatar']);
+        if(!profile) return res.status(400).json({ message: 'Profile not found'});
+        res.json(profile);   
+    } catch (error) {
+        if(error.kind == "ObjectId") res.status(400).json({ message: 'Profile not found'});
+        res.status(500).json({ message: 'Server error'});
     }
 });
 
@@ -68,14 +69,7 @@ router.post('/', [ [
         if(twitter) profile.social.twitter = twitter;
 
         try {
-            let newProfile = await Profile.findOne({ user: req.user.id});
-            if(newProfile) {
-                newProfile = await Profile.findOneAndUpdate({ user: req.user.id }, {$set: profile}, {new: true});
-                res.json(newProfile);
-            }
-
-            newProfile = Profile(profile);
-            await newProfile.save();
+            let newProfile = await Profile.findOneAndUpdate({ user: req.user.id },{ $set: profile },{ new: true, upsert: true });
             res.json(newProfile);
         } catch (error) {
             console.log(error.message);
@@ -89,6 +83,7 @@ router.post('/', [ [
 router.delete('/', auth, async (req, res) => { 
     const userId = req.user.id;
     try {
+        await Post.deleteMany({ user: req.user.id})
         await Profile.findOneAndRemove({ user: userId });
         await User.findOneAndRemove({ _id: userId });
         res.json({ message: 'User Profile deleted' });
